@@ -2,7 +2,7 @@
   <head>
 <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>  
 <script type="text/javascript" src="js/jquery.mpager.js"></script> 
-<script type="text/javascript" src="js/smp.js"></script>
+
 <script type="text/javascript" src="js/swfobject/swfobject.js"></script>
 
 <script type="text/javascript" src="js/purl.js"></script>
@@ -32,6 +32,14 @@ $(document).ready(function() {
 });
 </script>
   <body class="ms">
+  <object id="Jazz1" classid="CLSID:1ACE1618-1C7D-4561-AEE1-34842AA85E90" class="hidden">
+  <object id="Jazz2" type="audio/x-jazz" class="hidden">
+<p style="visibility:visible;">This page requires <a href=http://jazz-soft.net>Jazz-Plugin</a> ...</p>
+  </object>
+</object>
+<script type="text/javascript" src="js/smp.js"></script>
+<div id=selectmididiv class="hidden"><p>MIDI Out: <select id=selectmidi onchange='changemidi();'></select></p></div>
+<button onclick="plugPiano()">plugPiano</button>
     <div id="smp-pages" class="smp-pages">
     </div>   		     
     <div id="smp-control">              
