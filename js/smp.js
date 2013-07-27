@@ -11,6 +11,10 @@ consumerKey = 'musichackday'
 var events;
 var eventsSorted;
 
+//websocket implementation (send MIDI events to nodeJS server)
+var wsAddress = 'ws://127.0.0.1:1337';
+window.WebSocket = window.WebSocket || window.MozWebSocket;	// Firefox specific
+var connection = new WebSocket(wsAddress);
 
 var maxPageWidth;
 var pageWidth;
@@ -234,13 +238,14 @@ function MIDIPlayerReady() {
 		var event = findEvent(events, (1000 * now) / player.timeWarp);
 		mpager.goTo(event.elid);
 	});
-	MIDI.Player.addListener(function(data) { // set it to your own function!
+	player.addListener(function(data) { // set it to your own function!
 		var now = data.now; // where we are now
 		var end = data.end; // time when song ends
 		var channel = data.channel; // channel note is playing on
 		var message = data.message; // 128 is noteOff, 144 is noteOn
 		var note = data.note; // the note
 		var velocity = data.velocity; // the velocity of the note
+		connection.send(JSON.stringify(data));
 	});
 
 }
