@@ -10,13 +10,9 @@ var scoreSecret = "7cf5724682"
 consumerKey = 'musichackday'
 var events;
 var eventsSorted;
+var iteration=0;
 
-playlist();
-
-//websocket implementation (send MIDI events to nodeJS server)
-/*var wsAddress = 'ws://127.0.0.1:1337';
-window.WebSocket = window.WebSocket || window.MozWebSocket;	// Firefox specific
-var connection = new WebSocket(wsAddress);*/
+//playlist();
 
 function sleep(milliseconds) {
   var start = new Date().getTime();
@@ -62,12 +58,14 @@ var isMobile;
 
 var parts;
 
-$(document).ready(function() {
+
+function startPlaying() {
+    if(player!=undefined) player.stop();
 	isMobile = (navigator.platform == 'iPad' || navigator.platform == 'iPhone' || navigator.platform == 'iPod');
-		
+    
 	$('#smp-pages').width($(document).width() - 250);
 	$('#smp-control').width($(document).width() - 250);
-
+    
 	maxPageWidth = $('#smp-pages').width();
 	var mainUrl = $.url();
 	tmpScoreId =mainUrl.param('score');
@@ -77,169 +75,9 @@ $(document).ready(function() {
 		scoreSecret = tmpScoreSecret;
 	}
 	MIDI.loader = new widgets.Loader;
-	$.getJSON('http://api.musescore.com/services/rest/score/' + scoreId + ".jsonp?secret=" + scoreSecret + "&oauth_consumer_key="+ consumerKey +"&callback=?", function(data) {
-		var pages = data.metadata.pages;
-		parts = data.metadata.parts.length;
-		var dimensions = data.metadata.dimensions;
-		var pageWidth = parseInt(dimensions.split('x')[0]) * mmToPixel;
-		$("#smp-page-count").text(pages);
-		$("#smp-measure-count").text(data.metadata.measures);
-		mpager = $("#smp-pages").mpager({
-			api		: true,
-			pages 	: pages,
-			scoreId : scoreId,
-			scoreSecret : scoreSecret,
-			apiServer : "http://musescore.com",
-			staticBucket : "static.musescore.com",
-			measureClickCallback : measureClick,
-			measureChangeCallback: measureChange,
-			pageWidth: pageWidth,
-			defaultMeasure: -1,
-			bottomPadding: 10,
-			consumerKey: consumerKey,
-			scrollToMeasure:true
-		});
-		var instruments = new Array(); 
-		$.each(data.metadata.parts, function(index, part) {
-			var program = parseInt(part.part.program);
-			if (program == 128)
-				program = 118;
-			if ($.inArray(program, instruments) == -1)
-				instruments.push(program);
-			}
-		);
-		console.log(instruments);
-		MIDI.loadPlugin({
-			soundfontUrl: "./soundfont/",
-			instruments: instruments,
-			callback: function() {
-				player = MIDI.Player;
-				player.timeWarp = 1; // speed the song is played back
-				player.loadFile('http://static.musescore.com/' + scoreId + '/'+ scoreSecret +'/score.mid', MIDIPlayerReady);
-				MIDI.loader.stop();
-			}
-		});
-
-		$('#smp-tempo-list').change(function(){
-			console.log($(this).val());
-			var playing = player.playing;
-			var ct = player.currentTime;
-			var tw = player.timeWarp;
-			var tempo = $(this).find(":selected").attr("data-tempo");
-			var ntw = parseFloat(tempo);
-			if(ntw != tw) {
-				$('#smp-control-play').addClass('smp-control-play-mode');
-				$('#smp-control-play').removeClass('smp-control-pauze-mode');
-				player.stop();
-				player.timeWarp = ntw; // speed the song is played back
-				player.loadFile('http://static.musescore.com/' + scoreId + '/'+ scoreSecret +'/score.mid?nocache', function() {
-					MIDIPlayerReady();
-					if(playing) {
-						player.currentTime = (ct * ntw) / tw;
-						player.start();
-						$('#smp-control-play').removeClass('smp-control-play-mode');
-						$('#smp-control-play').addClass('smp-control-pauze-mode');
-					}
-				});
-				
-			}
-		}) ; 
-	});
-
-	var bottomPadding = $("#smp-control").height();
-	//stick the footer at the bottom of the page if we're on an iPad/iPhone due to viewport/page bugs in mobile webkit
-	if(isMobile)
-	{
-	     $("#smp-control").css("position", "static");
-	};	
-	
-	$("#smp-control-measure-goto").val(1);
-	$("#smp-control-page-goto").val(1);
-	
-	$('#smp-control-measure-prev').click(function() {
-		var m = mpager.cMeasure - 1;
-		if(mpager.goTo(m))
-			seekToMeasureId(m);
-		return false;
-	});
-
-	$('#smp-control-measure-next').click(function() {
-		var m = mpager.cMeasure + 1;
-		if(mpager.goTo(m))
-			seekToMeasureId(m);
-		return false;
-	});
-	
-	$('#smp-control-measure-goto').keypress(function(event) {
-		if (event.keyCode == '13') {
-			var measureId = $("#smp-control-measure-goto").val();
-			if(mpager.goTo(measureId-1))
-				seekToMeasureId(measureId-1);
-			return false;
-		}
-	});
-	
-	$('#smp-control-page-prev').click(function() {
-		if(mpager.prevPage(true))
-			seekToMeasureId(mpager.cMeasure);
-		return false;
-	});
-
-	$('#smp-control-page-next').click(function() {
-		if(mpager.nextPage(true))
-			seekToMeasureId(mpager.cMeasure);
-		return false;
-	});
-	
-	$('#smp-control-page-goto').keypress(function(event) {
-		if (event.keyCode == '13') {
-			var pageNumber = $("#smp-control-page-goto").val();
-			if(mpager.goToPage(pageNumber-1, true))
-				seekToMeasureId(mpager.cMeasure);
-			return false;
-		}
-	});
-
-  
-	
-	$('#smp-control-replay').click(function() {
-    	return false;
-	});
-	
-	$('#smp-control-play').click(function() {
-		if($('#smp-control-play').hasClass('smp-control-play-mode')){
-			if(player.currentTime == 0)
-				player.start();
-			else
-				player.resume();
-			$('#smp-control-play').removeClass('smp-control-play-mode');
-			$('#smp-control-play').addClass('smp-control-pauze-mode');
-		}
-    else{
-			if(player.playing)
-				player.pause();
-			else
-				player.stop();
-			$('#smp-control-play').addClass('smp-control-play-mode');
-			$('#smp-control-play').removeClass('smp-control-pauze-mode');
-		}
-    return false;
-	});
-
-$.getJSON('http://api.musescore.com/services/rest/score/' + scoreId + "/time.jsonp?secret=" + scoreSecret + "&oauth_consumer_key="+ consumerKey +"&callback=?", function(data) {
-		events = data;
-		eventsSorted = {};
-		for ( var i = 0; i < data.length; i++) {
-			 events[i].position = parseFloat(events[i].position);
-		 if( ! eventsSorted[events[i].elid] ) {
-		    eventsSorted[events[i].elid] = new Array();
-		 }
-		 eventsSorted[events[i].elid].push(events[i].position);
-		}
-	});
-	
-	plugPiano();
-});
+    
+    runPlaylist();
+}
 
 function MIDIPlayerReady() {
 	console.log('MIDI player ready');
@@ -280,7 +118,6 @@ function MIDIPlayerReady() {
 		var message = data.message; // 128 is noteOff, 144 is noteOn
 		var note = data.note; // the note
 		var velocity = data.velocity; // the velocity of the note
-		//connection.send(JSON.stringify(data));
 		if(Jazz.isJazz) {
 			var msg;
 			if(message==128) msg=0x80;
@@ -344,12 +181,204 @@ function smpInputResizer(element) {
   $(element).css('width', $(element).val().length * 15);
 }
 
-function playlist() {
-    while(true) {
-        setTimeout(function() {
-                   $.get('http://localhost:3000/playlist/pop', function(data) {
-                         console.log(data);
-                         });
-                   }, 1000);
+function runPlaylist() {
+
+                   $.getJSON('http://localhost:3000/playlist/pop', function(data) {
+                             console.log(data);
+                             if(data !=undefined) {
+                             scoreId = data.id;
+                             scoreSecret = data.secret;
+                             processId();
+                             }
+                             else {
+                                $("#smp-pages").html('Sorry, nothing to play');
+                             
+                             }
+                             return;
+                             });
+
+                   
+    /*if(iteration==0) {
+        var data= '{"id":"39069","secret":"123f429e59","pageCount":"1","permalink":"http://musescore.com/score/39069","title":"Reunion"}';
+        iteration++;
     }
+    else
+        var data= '{"id":"26467","secret":"c0496270b2","pageCount":"4","permalink":"http://musescore.com/score/26467","title":"Angry birds fuga con barok style"}';
+    var dt= JSON.parse(data);
+    console.log(dt);
+    scoreId = dt.id;
+    scoreSecret = dt.secret;
+    console.log('scoreId = '+scoreId+' scoreSecret = '+scoreSecret);
+    return(1);*/
 }
+
+function processId() {
+    console.log(scoreId);
+	$.getJSON('http://api.musescore.com/services/rest/score/' + scoreId + ".jsonp?secret=" + scoreSecret + "&oauth_consumer_key="+ consumerKey +"&callback=?", function(data) {
+              var pages = data.metadata.pages;
+              parts = data.metadata.parts.length;
+              var dimensions = data.metadata.dimensions;
+              var pageWidth = parseInt(dimensions.split('x')[0]) * mmToPixel;
+              $("#smp-pages").html('');
+              $("#smp-channel-list").html('');
+              $("#smp-page-count").text(pages);
+              $("#smp-measure-count").text(data.metadata.measures);
+              mpager = $("#smp-pages").mpager({
+                                              api		: true,
+                                              pages 	: pages,
+                                              scoreId : scoreId,
+                                              scoreSecret : scoreSecret,
+                                              apiServer : "http://musescore.com",
+                                              staticBucket : "static.musescore.com",
+                                              measureClickCallback : measureClick,
+                                              measureChangeCallback: measureChange,
+                                              pageWidth: pageWidth,
+                                              defaultMeasure: -1,
+                                              bottomPadding: 10,
+                                              consumerKey: consumerKey,
+                                              scrollToMeasure:true
+                                              });
+              var instruments = new Array();
+              $.each(data.metadata.parts, function(index, part) {
+                     var program = parseInt(part.part.program);
+                     if (program == 128)
+                     program = 118;
+                     if ($.inArray(program, instruments) == -1)
+                     instruments.push(program);
+                     }
+                     );
+              console.log(instruments);
+              MIDI.loadPlugin({
+                              soundfontUrl: "./soundfont/",
+                              instruments: instruments,
+                              callback: function() {
+                              player = MIDI.Player;
+                              player.timeWarp = 1; // speed the song is played back
+                              player.loadFile('http://static.musescore.com/' + scoreId + '/'+ scoreSecret +'/score.mid', MIDIPlayerReady);
+                              MIDI.loader.stop();
+                              }
+                              });
+              
+              $('#smp-tempo-list').change(function(){
+                                          console.log($(this).val());
+                                          var playing = player.playing;
+                                          var ct = player.currentTime;
+                                          var tw = player.timeWarp;
+                                          var tempo = $(this).find(":selected").attr("data-tempo");
+                                          var ntw = parseFloat(tempo);
+                                          if(ntw != tw) {
+                                          $('#smp-control-play').addClass('smp-control-play-mode');
+                                          $('#smp-control-play').removeClass('smp-control-pauze-mode');
+                                          player.stop();
+                                          player.timeWarp = ntw; // speed the song is played back
+                                          player.loadFile('http://static.musescore.com/' + scoreId + '/'+ scoreSecret +'/score.mid?nocache', function() {
+                                                          MIDIPlayerReady();
+                                                          if(playing) {
+                                                          player.currentTime = (ct * ntw) / tw;
+                                                          player.start();
+                                                          $('#smp-control-play').removeClass('smp-control-play-mode');
+                                                          $('#smp-control-play').addClass('smp-control-pauze-mode');
+                                                          }
+                                                          });
+                                          
+                                          }
+                                          }) ;
+              console.log('start playing');
+              
+              });
+    
+	var bottomPadding = $("#smp-control").height();
+	//stick the footer at the bottom of the page if we're on an iPad/iPhone due to viewport/page bugs in mobile webkit
+	if(isMobile)
+	{
+        $("#smp-control").css("position", "static");
+	};
+	
+	$("#smp-control-measure-goto").val(1);
+	$("#smp-control-page-goto").val(1);
+	
+	$('#smp-control-measure-prev').click(function() {
+                                         var m = mpager.cMeasure - 1;
+                                         if(mpager.goTo(m))
+                                         seekToMeasureId(m);
+                                         return false;
+                                         });
+    
+	$('#smp-control-measure-next').click(function() {
+                                         var m = mpager.cMeasure + 1;
+                                         if(mpager.goTo(m))
+                                         seekToMeasureId(m);
+                                         return false;
+                                         });
+	
+	$('#smp-control-measure-goto').keypress(function(event) {
+                                            if (event.keyCode == '13') {
+                                            var measureId = $("#smp-control-measure-goto").val();
+                                            if(mpager.goTo(measureId-1))
+                                            seekToMeasureId(measureId-1);
+                                            return false;
+                                            }
+                                            });
+	
+	$('#smp-control-page-prev').click(function() {
+                                      if(mpager.prevPage(true))
+                                      seekToMeasureId(mpager.cMeasure);
+                                      return false;
+                                      });
+    
+	$('#smp-control-page-next').click(function() {
+                                      if(mpager.nextPage(true))
+                                      seekToMeasureId(mpager.cMeasure);
+                                      return false;
+                                      });
+	
+	$('#smp-control-page-goto').keypress(function(event) {
+                                         if (event.keyCode == '13') {
+                                         var pageNumber = $("#smp-control-page-goto").val();
+                                         if(mpager.goToPage(pageNumber-1, true))
+                                         seekToMeasureId(mpager.cMeasure);
+                                         return false;
+                                         }
+                                         });
+    
+    
+	
+	$('#smp-control-replay').click(function() {
+                                   return false;
+                                   });
+	
+	$('#smp-control-play').click(function() {
+                                 if($('#smp-control-play').hasClass('smp-control-play-mode')){
+                                 if(player.currentTime == 0)
+                                 player.start();
+                                 else
+                                 player.resume();
+                                 $('#smp-control-play').removeClass('smp-control-play-mode');
+                                 $('#smp-control-play').addClass('smp-control-pauze-mode');
+                                 }
+                                 else{
+                                 if(player.playing)
+                                 player.pause();
+                                 else
+                                 player.stop();
+                                 $('#smp-control-play').addClass('smp-control-play-mode');
+                                 $('#smp-control-play').removeClass('smp-control-pauze-mode');
+                                 }
+                                 return false;
+                                 });
+    
+    $.getJSON('http://api.musescore.com/services/rest/score/' + scoreId + "/time.jsonp?secret=" + scoreSecret + "&oauth_consumer_key="+ consumerKey +"&callback=?", function(data) {
+              events = data;
+              eventsSorted = {};
+              for ( var i = 0; i < data.length; i++) {
+              events[i].position = parseFloat(events[i].position);
+              if( ! eventsSorted[events[i].elid] ) {
+              eventsSorted[events[i].elid] = new Array();
+              }
+              eventsSorted[events[i].elid].push(events[i].position);
+              }
+              });
+	
+	plugPiano();
+}
+

@@ -36,7 +36,9 @@ $(document).ready(function() {
     </div>   		     
     <div id="smp-control">              
       <a id="smp-control-replay" href="#">&nbsp;</a>            
-      <a id="smp-control-play" class="smp-control-play-mode" href="#">&nbsp;</a>                           
+      <a id="smp-control-play" class="smp-control-play-mode" href="#">&nbsp;</a>
+        <button onclick="startPlaying()">Next score</button>
+        <button onclick="player.start();">Play</button>
       <span id="smp-control-measure">            Measure 
         <a id="smp-control-measure-prev" href="#">&lt;</a>              
         <input id="smp-control-measure-goto" value="1" size="3" />/<span id="smp-measure-count">12</span>           
@@ -64,7 +66,7 @@ $(document).ready(function() {
   </object>
 </object>
 <script type="text/javascript" src="js/smp.js"></script>
-<button onclick="plugPiano()">plugPiano</button>
+
 <div id=selectmididiv class="hidden"><p>MIDI Out: <select id=selectmidi onchange='changemidi();'></select></p></div>
   </body>
 </html>
