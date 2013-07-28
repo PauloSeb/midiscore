@@ -28,13 +28,11 @@ var Jazz = document.getElementById("Jazz1"); if(!Jazz || !Jazz.isJazz) Jazz = do
 
 function plugPiano() {
 	console.log('plugPiano');
-    console.log(Jazz.MidiOutList);
 	try{
 		 var list=Jazz.MidiOutList();
 		 console.log(list);
-		 Jazz.MidiOutOpen(list.lengh-1);
-		 document.getElementById('selectmididiv').className='';
-		 console.log('selected OUT='+list[1]);
+        Jazz.MidiOutOpen(list[1]);
+		 console.log("selected");
 		}
 		catch(err){ console.log('error:'+err);}
 }
@@ -259,7 +257,7 @@ function processId() {
                               });
               } else {
                 player.loadFile('http://static.musescore.com/' + scoreId + '/'+ scoreSecret +'/score.mid', MIDIPlayerReady);
-              autoPlay();
+                autoPlay();
               }
               
               
@@ -393,6 +391,7 @@ function processId() {
 
 
 function  autoPlay() {
+    plugPiano();
     if($('#smp-control-play').hasClass('smp-control-play-mode')){
         if(player.currentTime == 0)
             player.start();
