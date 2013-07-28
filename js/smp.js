@@ -25,24 +25,18 @@ function sleep(milliseconds) {
 
 var Jazz = document.getElementById("Jazz1"); if(!Jazz || !Jazz.isJazz) Jazz = document.getElementById("Jazz2");
 
-function changemidi(){
- Jazz.MidiOutOpen(select.options[select.selectedIndex].value);
-}
-var select=document.getElementById('selectmidi');
 
 function plugPiano() {
 	console.log('plugPiano');
+    console.log(Jazz.MidiOutList);
 	try{
 		 var list=Jazz.MidiOutList();
 		 console.log(list);
-		 Jazz.MidiOutOpen(list[1]);
-		 for(var i in list){
-		  select[i]=new Option(list[i],list[i],i==0,i==0);
-		 }
+		 Jazz.MidiOutOpen(list.lengh-1);
 		 document.getElementById('selectmididiv').className='';
-		 console.log(list[1]);
+		 console.log('selected OUT='+list[1]);
 		}
-		catch(err){ console.log(err);}
+		catch(err){ console.log('error:'+err);}
 }
 
 var maxPageWidth;
@@ -125,7 +119,8 @@ function MIDIPlayerReady() {
 			Jazz.MidiOut(msg,note,velocity/1.2);
 		}
 	});
-
+    
+    autoPlay();
 }
 
 function measureChange(element, id) {
@@ -183,7 +178,7 @@ function smpInputResizer(element) {
 
 function runPlaylist() {
 
-                   $.getJSON('http://localhost:3000/playlist/pop', function(data) {
+                   $.getJSON('http://steinwayradio.herokuapp.com/playlist/pop', function(data) {
                              console.log(data);
                              if(data !=undefined) {
                              scoreId = data.id;
@@ -213,7 +208,7 @@ function runPlaylist() {
 }
 
 function processId() {
-    console.log(scoreId);
+    console.log('processing : ' +scoreId);
 	$.getJSON('http://api.musescore.com/services/rest/score/' + scoreId + ".jsonp?secret=" + scoreSecret + "&oauth_consumer_key="+ consumerKey +"&callback=?", function(data) {
               var pages = data.metadata.pages;
               parts = data.metadata.parts.length;
@@ -248,16 +243,28 @@ function processId() {
                      }
                      );
               console.log(instruments);
-              MIDI.loadPlugin({
+              console.log('before load');
+              if(!iteration) {
+              iteration++;
+                MIDI.loadPlugin({
                               soundfontUrl: "./soundfont/",
                               instruments: instruments,
                               callback: function() {
                               player = MIDI.Player;
                               player.timeWarp = 1; // speed the song is played back
+                              console.log('loading =' + 'http://static.musescore.com/' + scoreId + '/'+ scoreSecret +'/score.mid?nocache');
                               player.loadFile('http://static.musescore.com/' + scoreId + '/'+ scoreSecret +'/score.mid', MIDIPlayerReady);
                               MIDI.loader.stop();
                               }
                               });
+              } else {
+                player.loadFile('http://static.musescore.com/' + scoreId + '/'+ scoreSecret +'/score.mid', MIDIPlayerReady);
+              autoPlay();
+              }
+              
+              
+              
+              
               
               $('#smp-tempo-list').change(function(){
                                           console.log($(this).val());
@@ -271,7 +278,9 @@ function processId() {
                                           $('#smp-control-play').removeClass('smp-control-pauze-mode');
                                           player.stop();
                                           player.timeWarp = ntw; // speed the song is played back
+                                          
                                           player.loadFile('http://static.musescore.com/' + scoreId + '/'+ scoreSecret +'/score.mid?nocache', function() {
+                                                          console.log('score loaded');
                                                           MIDIPlayerReady();
                                                           if(playing) {
                                                           player.currentTime = (ct * ntw) / tw;
@@ -379,6 +388,26 @@ function processId() {
               }
               });
 	
-	plugPiano();
+	plugPiano(); //worked once
 }
 
+
+function  autoPlay() {
+    if($('#smp-control-play').hasClass('smp-control-play-mode')){
+        if(player.currentTime == 0)
+            player.start();
+        else
+            player.resume();
+        $('#smp-control-play').removeClass('smp-control-play-mode');
+        $('#smp-control-play').addClass('smp-control-pauze-mode');
+    }
+    else{
+        if(player.playing)
+            player.pause();
+        else
+            player.stop();
+        $('#smp-control-play').addClass('smp-control-play-mode');
+        $('#smp-control-play').removeClass('smp-control-pauze-mode');
+    }
+    return false;
+}
