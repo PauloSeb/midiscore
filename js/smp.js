@@ -1,4 +1,3 @@
-
 var player;
 
 
@@ -12,10 +11,21 @@ consumerKey = 'musichackday'
 var events;
 var eventsSorted;
 
+playlist();
+
 //websocket implementation (send MIDI events to nodeJS server)
 /*var wsAddress = 'ws://127.0.0.1:1337';
 window.WebSocket = window.WebSocket || window.MozWebSocket;	// Firefox specific
 var connection = new WebSocket(wsAddress);*/
+
+function sleep(milliseconds) {
+  var start = new Date().getTime();
+  for (var i = 0; i < 1e7; i++) {
+    if ((new Date().getTime() - start) > milliseconds){
+      break;
+    }
+  }
+}
 
 var Jazz = document.getElementById("Jazz1"); if(!Jazz || !Jazz.isJazz) Jazz = document.getElementById("Jazz2");
 
@@ -25,21 +35,19 @@ function changemidi(){
 var select=document.getElementById('selectmidi');
 
 function plugPiano() {
-	console.log("plugPiano called");
-	var local = Jazz;
+	console.log('plugPiano');
 	try{
 		 var list=Jazz.MidiOutList();
 		 console.log(list);
-		 console.log("selected:"+list[1]);
 		 Jazz.MidiOutOpen(list[1]);
 		 for(var i in list){
 		  select[i]=new Option(list[i],list[i],i==0,i==0);
 		 }
 		 document.getElementById('selectmididiv').className='';
+		 console.log(list[1]);
 		}
-		catch(err){}
+		catch(err){ console.log(err);}
 }
-
 
 var maxPageWidth;
 var pageWidth;
@@ -229,6 +237,8 @@ $.getJSON('http://api.musescore.com/services/rest/score/' + scoreId + "/time.jso
 		 eventsSorted[events[i].elid].push(events[i].position);
 		}
 	});
+	
+	plugPiano();
 });
 
 function MIDIPlayerReady() {
@@ -273,17 +283,10 @@ function MIDIPlayerReady() {
 		//connection.send(JSON.stringify(data));
 		if(Jazz.isJazz) {
 			var msg;
-			if(message==128) {
-				msg=0x80;
-			}
+			if(message==128) msg=0x80;
 			else msg=0x90;
-			console.log("msg= "+msg);
-			console.log("note= "+note);
-			console.log("velocity= "+velocity);
-			Jazz.MidiOut(msg,note,velocity/2);
+			Jazz.MidiOut(msg,note,velocity/1.2);
 		}
-			//Jazz.MidiOut(0x90,60,100);
-			//Jazz.MidiOut(message,note,velocity);
 	});
 
 }
@@ -338,5 +341,15 @@ function findEvent(evts, time) {
 }
 
 function smpInputResizer(element) {
-  $(element).css('width', $(element).val().length * 15); 
+  $(element).css('width', $(element).val().length * 15);
+}
+
+function playlist() {
+    while(true) {
+        setTimeout(function() {
+                   $.get('http://localhost:3000/playlist/pop', function(data) {
+                         console.log(data);
+                         });
+                   }, 1000);
+    }
 }
